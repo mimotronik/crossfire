@@ -8,6 +8,8 @@ import io.netty.handler.codec.socksx.SocksMessage;
 import io.netty.handler.codec.socksx.v5.*;
 
 /**
+ * 处理 Socks5连接
+ *
  * @author winterfell
  */
 @ChannelHandler.Sharable

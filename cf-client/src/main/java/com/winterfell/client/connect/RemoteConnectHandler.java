@@ -1,15 +1,15 @@
 package com.winterfell.client.connect;
 
-import com.winterfell.common.message.ClientToServerContent;
-import com.winterfell.common.message.ContentPackage;
-import com.winterfell.common.message.ContentParser;
-import com.winterfell.common.message.ServerToClientContent;
+import com.winterfell.client.handler.LocalChannelInfo;
+import com.winterfell.client.handler.LocalHandler;
+import com.winterfell.client.handler.SocksServerConnectHandler;
+import com.winterfell.common.message.*;
 import com.winterfell.common.protocol.TransferProtocol;
 import com.winterfell.common.utils.RandomUtils;
-import com.winterfell.common.utils.SocksServerUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 
 import java.util.Map;
 import java.util.Objects;
@@ -22,42 +22,33 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RemoteConnectHandler extends SimpleChannelInboundHandler<TransferProtocol> {
 
     /**
-     * 连接远程的Channel
+     * 连接远程的Channel 理论上只有一个 软件层面实现多路复用
      */
     private static Channel connectChannel;
 
     /**
-     * 存储本地的socks5的channel
+     * 本地的包
      */
-    private static Map<String, Channel> localChannelMap = new ConcurrentHashMap<>();
+    private static Map<String, LocalChannelInfo> localSocksChannelInfos = new ConcurrentHashMap<>();
+
+    private static Map<String, Promise<Object>> promiseConnectMap = new ConcurrentHashMap<>();
 
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("remote connect success ...");
+        System.out.println("connect remote server success ...");
         connectChannel = ctx.channel();
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TransferProtocol msg) throws Exception {
-        // 获取到远程服务器回复的消息
         byte[] receiveFromServer = msg.getContent();
-
         ServerToClientContent serverToClientContent = ContentParser.parseS2C(receiveFromServer);
-
-        boolean success = serverToClientContent.getSuccess() > 0;
-
-        // 远程服务器回复的是正确消息
-        if (success) {
-
-        } else {
-
-        }
-
-        sendMessageToLocal(serverToClientContent);
-
         ReferenceCountUtil.release(msg);
+        // 获取到远程服务器传回的消息并处理转发给本地
+        sendMessageToLocal(serverToClientContent);
     }
+
 
     /**
      * 服务端发送过来的消息，回送给 socks 连接
@@ -66,21 +57,29 @@ public class RemoteConnectHandler extends SimpleChannelInboundHandler<TransferPr
      */
     private static void sendMessageToLocal(ServerToClientContent serverToClientContent) {
         String channelId = serverToClientContent.getChannelId();
-        Channel localChannel = localChannelMap.get(channelId);
-        if (Objects.isNull(localChannel) || !localChannel.isActive()) {
-            return;
-        }
+        LocalChannelInfo localChannelInfo = getLocalChannelInfo(channelId);
+        Channel localSocksChannel = localChannelInfo.getChannel();
+
         boolean success = serverToClientContent.getSuccess() > 0;
 
-        if (success) {
-            if (localChannel.isActive()) {
+        if (success && localSocksChannel.isActive()) {
+            byte option = serverToClientContent.getOption();
+            if (option == Option.connect) {
+                // 消息是 服务端建立连接成功的消息
+                // 接下来通知socks的连接可以发送内容了
+                Promise<Object> promiseConnect = promiseConnectMap.remove(channelId);
+                promiseConnect.setSuccess(null);
+                return;
+            } else if (option == Option.send) {
                 byte[] msg = serverToClientContent.getMsg();
-                localChannel.writeAndFlush(Unpooled.copiedBuffer(msg));
+                localSocksChannel.writeAndFlush(Unpooled.copiedBuffer(msg));
             }
         } else {
             // 接收到服务端的消息是失败的消息
-            SocksServerUtils.closeOnFlush(localChannel);
-            removeLocalChannel(channelId);
+            if (localSocksChannel.isActive()) {
+                SocksServerConnectHandler.failureSocks5CommandResponse(localSocksChannel, localChannelInfo.getRequest());
+            }
+            removeLocalChannelInfo(channelId);
         }
 
     }
@@ -107,15 +106,37 @@ public class RemoteConnectHandler extends SimpleChannelInboundHandler<TransferPr
     }
 
     /**
-     * @param sign
-     * @param localChannel
+     * 期望远程创建连接
+     *
+     * @return
      */
-    public static void addLocalChannel(String sign, Channel localChannel) {
-        localChannelMap.put(sign, localChannel);
+    public static void sendPromiseConnectToRemoteServer(String channelId,
+                                                        ClientToServerContent promiseContent,
+                                                        Promise<Object> promiseConnect) {
+        if (connectChannel.isActive()) {
+            byte[] pack = ContentPackage.pack(promiseContent);
+            TransferProtocol transferProtocol = new TransferProtocol(
+                    RandomUtils.getRandomInt(),
+                    pack.length,
+                    pack
+            );
+
+            promiseConnectMap.put(channelId, promiseConnect);
+
+            connectChannel.writeAndFlush(transferProtocol);
+        }
     }
 
-    public static void removeLocalChannel(String sign) {
-        localChannelMap.remove(sign);
+    public static void removeLocalChannelInfo(String channelId) {
+        localSocksChannelInfos.remove(channelId);
+    }
+
+    public static void putLocalChannelInfo(String channelId, LocalChannelInfo localChannelInfo) {
+        localSocksChannelInfos.put(channelId, localChannelInfo);
+    }
+
+    public static LocalChannelInfo getLocalChannelInfo(String channelId) {
+        return localSocksChannelInfos.get(channelId);
     }
 
     @Override

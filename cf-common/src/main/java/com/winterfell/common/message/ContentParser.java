@@ -33,31 +33,34 @@ public class ContentParser {
         int success = IpPortUtils.byteArrayToInt(successBytes);
 
         if (success < 0) {
-            return new ClientToServerContent(channelId, success, null, -1, null);
+            return new ClientToServerContent(channelId, success, Option.other, null, -1, null
+            );
         }
 
+        byte option = bytes[idLenBytes.length + channelIdBytes.length + successBytes.length];
+
         byte[] addressLenBytes = new byte[4];
-        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length,
+        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1,
                 addressLenBytes, 0, addressLenBytes.length);
         // 地址长度
         int addressLen = IpPortUtils.byteArrayToInt(addressLenBytes);
 
         byte[] addressBytes = new byte[addressLen];
-        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length,
+        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length,
                 addressBytes, 0, addressBytes.length);
         String address = new String(addressBytes);
 
         byte[] portBytes = new byte[2];
-        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length + addressBytes.length,
+        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length + addressBytes.length,
                 portBytes, 0, portBytes.length);
         int port = IpPortUtils.getPortByBytes(portBytes[0], portBytes[1]);
 
-        int msgLen = bytes.length - (idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length + addressBytes.length + portBytes.length);
+        int msgLen = bytes.length - (idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length + addressBytes.length + portBytes.length);
         byte[] msg = new byte[msgLen];
-        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length + addressBytes.length + portBytes.length,
+        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length + addressBytes.length + portBytes.length,
                 msg, 0, msg.length);
 
-        return new ClientToServerContent(channelId, success, address, port, msg);
+        return new ClientToServerContent(channelId, success, option, address, port, msg);
     }
 
     /**
@@ -84,13 +87,15 @@ public class ContentParser {
         int success = IpPortUtils.byteArrayToInt(successBytes);
 
         if (success < 0) {
-            return new ServerToClientContent(channelId, success, null);
+            return new ServerToClientContent(channelId, success, Option.other, null);
         }
 
-        int msgLen = bytes.length - (idLenBytes.length + channelIdBytes.length + successBytes.length);
+        byte option = bytes[idLenBytes.length + channelIdBytes.length + successBytes.length];
+
+        int msgLen = bytes.length - (idLenBytes.length + channelIdBytes.length + successBytes.length + 1);
         byte[] msg = new byte[msgLen];
-        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length,
+        System.arraycopy(bytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1,
                 msg, 0, msg.length);
-        return new ServerToClientContent(channelId, success, msg);
+        return new ServerToClientContent(channelId, success, option, msg);
     }
 }

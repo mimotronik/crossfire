@@ -12,11 +12,13 @@ public class ServerToClientContent {
     private String channelId;
     // >0 success <0 fail
     private int success;
+    private byte option;
     private byte[] msg;
 
-    public ServerToClientContent(String channelId, int success, byte[] msg) {
+    public ServerToClientContent(String channelId, int success, byte option, byte[] msg) {
         this.channelId = channelId;
         this.success = success;
+        this.option = option;
         this.msg = msg;
     }
 
@@ -34,6 +36,14 @@ public class ServerToClientContent {
 
     public void setSuccess(int success) {
         this.success = success;
+    }
+
+    public byte getOption() {
+        return option;
+    }
+
+    public void setOption(byte option) {
+        this.option = option;
     }
 
     public byte[] getMsg() {

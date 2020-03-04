@@ -14,14 +14,16 @@ public class ClientToServerContent {
     private String channelId;
     // >0 success <0 fail
     private int success;
+    private byte option;
     //    private int addressLength;
     private String address;
     private int port;
     private byte[] msg;
 
-    public ClientToServerContent(String channelId, int success, String address, int port, byte[] msg) {
+    public ClientToServerContent(String channelId, int success, byte option, String address, int port, byte[] msg) {
         this.channelId = channelId;
         this.success = success;
+        this.option = option;
         this.address = address;
         this.port = port;
         this.msg = msg;
@@ -41,6 +43,14 @@ public class ClientToServerContent {
 
     public void setSuccess(int success) {
         this.success = success;
+    }
+
+    public byte getOption() {
+        return option;
+    }
+
+    public void setOption(byte option) {
+        this.option = option;
     }
 
     public String getAddress() {

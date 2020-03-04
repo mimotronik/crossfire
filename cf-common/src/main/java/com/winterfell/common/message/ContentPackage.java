@@ -36,43 +36,46 @@ public class ContentPackage {
 
         byte[] portBytes = IpPortUtils.getBytesByPort(port);
 
-        byte[] res = new byte[
+        byte[] resBytes = new byte[
                 idLenBytes.length
                         + channelIdBytes.length
                         + successBytes.length
+                        + 1
                         + addressLenBytes.length
                         + addressBytes.length
                         + portBytes.length
                         + msg.length
                 ];
         System.arraycopy(idLenBytes, 0,
-                res, 0,
+                resBytes, 0,
                 idLenBytes.length);
 
         System.arraycopy(channelIdBytes, 0,
-                res, idLenBytes.length,
+                resBytes, idLenBytes.length,
                 channelIdBytes.length);
 
         System.arraycopy(successBytes, 0,
-                res, idLenBytes.length + channelIdBytes.length
+                resBytes, idLenBytes.length + channelIdBytes.length
                 , successBytes.length);
 
+        resBytes[idLenBytes.length + channelIdBytes.length + successBytes.length] = clientToServerContent.getOption();
+
         System.arraycopy(addressLenBytes, 0,
-                res, idLenBytes.length + channelIdBytes.length + successBytes.length,
+                resBytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1,
                 addressLenBytes.length);
 
         System.arraycopy(addressBytes, 0,
-                res, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length,
+                resBytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length,
                 addressBytes.length);
 
         System.arraycopy(portBytes, 0,
-                res, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length + addressBytes.length,
+                resBytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length + addressBytes.length,
                 portBytes.length);
 
         System.arraycopy(msg, 0,
-                res, idLenBytes.length + channelIdBytes.length + successBytes.length + addressLenBytes.length + addressBytes.length + portBytes.length,
+                resBytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1 + addressLenBytes.length + addressBytes.length + portBytes.length,
                 msg.length);
-        return res;
+        return resBytes;
     }
 
 
@@ -92,6 +95,7 @@ public class ContentPackage {
                 idLenBytes.length
                         + channelIdBytes.length
                         + successBytes.length
+                        + 1
                         + msg.length
                 ];
 
@@ -113,9 +117,11 @@ public class ContentPackage {
                 successBytes.length
         );
 
+        packBytes[idLenBytes.length + channelIdBytes.length + successBytes.length] = serverToClientContent.getOption();
+
         System.arraycopy(
                 msg, 0,
-                packBytes, idLenBytes.length + channelIdBytes.length + successBytes.length,
+                packBytes, idLenBytes.length + channelIdBytes.length + successBytes.length + 1,
                 msg.length
         );
 

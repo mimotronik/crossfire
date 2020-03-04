@@ -9,6 +9,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import java.net.InetSocketAddress;
 
 /**
+ * TODO 里面有个bug不容易发现就是要先连接上客户端 Socks5的服务端才有用 异步
+ *
  * @author winterfell
  */
 public class RemoteConnectStarter {
@@ -22,6 +24,13 @@ public class RemoteConnectStarter {
         this.bootstrap = new Bootstrap();
     }
 
+    /**
+     * 启动远程连接
+     *
+     * @param group
+     * @return
+     * @throws Exception
+     */
     public RemoteConnectStarter start(EventLoopGroup group) throws Exception {
         bootstrap.group(group).channel(NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
@@ -41,7 +50,7 @@ public class RemoteConnectStarter {
         channelFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                System.out.println("connect remote server " + future.isSuccess());
+                System.out.println("connect remote server " + (future.isSuccess() ? "success" : "fail"));
             }
         });
         return this;
