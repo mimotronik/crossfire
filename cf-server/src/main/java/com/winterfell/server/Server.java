@@ -1,6 +1,6 @@
 package com.winterfell.server;
 
-import com.winterfell.server.handler.ReceiveHandler;
+import com.winterfell.server.handler.ServerHandlerInit;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -22,16 +22,14 @@ public class Server {
 
             b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
-                    .childHandler(new ReceiveHandler());
+                    .childHandler(new ServerHandlerInit());
 
             System.out.println("server start success at port " + PORT + "...");
 
             b.bind(PORT).sync().channel().closeFuture().sync();
-
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
     }
-
 }

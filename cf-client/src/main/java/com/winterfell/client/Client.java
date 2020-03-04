@@ -1,6 +1,7 @@
 package com.winterfell.client;
 
 import com.winterfell.client.config.RemoteServerConfig;
+import com.winterfell.client.connect.RemoteConnectStarter;
 import com.winterfell.client.handler.SocksServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
@@ -19,17 +20,21 @@ public class Client {
 
     public static void main(String[] args) throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup(3);
         try {
+
+            new RemoteConnectStarter(remoteConf)
+                    .start(workerGroup);
+
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new SocksServerInitializer());
+            System.out.println("local socks5 listen in " + PORT);
             b.bind(PORT).sync().channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
     }
-
 }
